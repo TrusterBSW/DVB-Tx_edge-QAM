@@ -157,7 +157,7 @@ Figé dans le FPGA : DVB-T 2K, 64-QAM, rendement 7/8, intervalle de garde 1/32, 
 - **Plusieurs cartes** : toutes les cartes Tezuka s'appellent `plutoplus`, donc avahi renomme la
   seconde (`edgeQAM plutoplus #2`, `plutoplus-2.local`) dans un ordre qui dépend de celle qui démarre
   en premier. Donner à chaque carte son propre `NAME` dans `edgeqam.conf`, et choisir une carte par
-  `NAME` ou `id` (ou utiliser des adresses IP fixes).
+  `NAME` ou `id` (ou utiliser des adresses IP fixes). Dans dvbtx : `serial = "<id>"` sur la radio (voir plus bas).
 
 ## Avec dvbtx
 
@@ -174,6 +174,7 @@ n'adapte pas le débit.
 | Norme | DVB-T 2K, 64-QAM, 7/8, GI 1/32, 8 MHz uniquement ; dvbtx refuse d'autres paramètres de porteuse sur cette radio |
 | Multiplex | 1 à 4 par carte, sur des canaux de 8 MHz adjacents (multiplex k = FREQ + (k−1) × 8 MHz) |
 | Découverte | mDNS `_dvbmod._udp` (`address = "auto"`) ou une adresse IP fixe |
+| Plusieurs cartes | `serial = "<id>"` sur la radio : l'`id` du TXT (adresse MAC Ethernet), le nom d'hôte ou le `NAME` de la carte ; `dvbtx devices` les liste. Avec plusieurs cartes et sans `serial`, dvbtx refuse au lieu d'en choisir une |
 | Horloge | dvbtx suit le quartz de la carte (remplissage des tampons lu 4 fois par seconde), PCR horodatés en conséquence |
 | Réglages | dvbtx règle la fréquence et désactive les multiplex inutilisés (`tune = true`, par défaut) ; le niveau d'émission reste celui de la carte |
 | Documentation | [README de dvbtx, *An edgeQAM board*](https://github.com/TrusterBSW/DVB-Tx#an-edgeqam-board-fpga-modulator-on-the-network) (même section dans README.fr.md) et `man 5 dvbtx.toml`, section *edgeQAM boards* |
@@ -183,6 +184,7 @@ n'adapte pas le débit.
 name = "fishball"
 driver = "edgeqam"
 address = "auto"          # trouvée par mDNS ; ou l'IP de la carte, par ex. "192.168.1.50"
+serial = "0060881fa308"   # seulement avec plusieurs cartes : id du TXT, nom d'hôte ou NAME
 
 [[carrier]]
 name = "Mux 1"

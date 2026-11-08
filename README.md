@@ -152,7 +152,7 @@ cell id 0 signalled.
 - **Several boards**: all Tezuka boards share the host name `plutoplus`, so avahi renames the
   second one (`edgeQAM plutoplus #2`, `plutoplus-2.local`) in an order that depends on which boots
   first. Give each board its own `NAME` in `edgeqam.conf`, and select a board by `NAME` or `id`
-  (or use fixed IP addresses).
+  (or use fixed IP addresses). In dvbtx: `serial = "<id>"` on the radio (see below).
 
 ## With dvbtx
 
@@ -169,6 +169,7 @@ and no rate adaptation.
 | Standard | DVB-T 2K, 64-QAM, 7/8, GI 1/32, 8 MHz only; dvbtx refuses other carrier parameters on this radio |
 | Multiplexes | 1 to 4 per board, on adjacent 8 MHz channels (multiplex k = FREQ + (k−1) × 8 MHz) |
 | Discovery | mDNS `_dvbmod._udp` (`address = "auto"`) or a fixed IP address |
+| Several boards | `serial = "<id>"` on the radio: the board's TXT `id` (Ethernet MAC), its host name or its `NAME`; `dvbtx devices` lists them. With several boards and no `serial`, dvbtx refuses instead of picking one |
 | Clock | dvbtx follows the board's crystal (buffer level read 4 times a second), PCRs stamped for it |
 | Settings | dvbtx sets the frequency and disables the unused multiplexes (`tune = true`, default); the TX level stays the board's own setting |
 | Documentation | [dvbtx README, *An edgeQAM board*](https://github.com/TrusterBSW/DVB-Tx#an-edgeqam-board-fpga-modulator-on-the-network) and `man 5 dvbtx.toml`, section *edgeQAM boards* |
@@ -178,6 +179,7 @@ and no rate adaptation.
 name = "fishball"
 driver = "edgeqam"
 address = "auto"          # found by mDNS; or the board's IP, e.g. "192.168.1.50"
+serial = "0060881fa308"   # only needed with several boards: TXT id, host name or NAME
 
 [[carrier]]
 name = "Mux 1"
