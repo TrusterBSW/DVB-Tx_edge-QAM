@@ -217,6 +217,7 @@ HamGeek Fishball 7010, mode 1R1T, dissipateur cuivre sans ventilateur.
 | 4 flux UDP à plein débit pendant 90 s (filaire) | 1 895 054 paquets par multiplex envoyés et reçus, aucune perte |
 | RF sur le câble, HackRF One centré sur chaque multiplex, gr-dtv | 4 multiplex, 0 paquet non corrigible ; MER 22–23 dB, plate sur le canal (limite du HackRF 8 bits) |
 | Flux venant de dvbtx, réception RF | service décodé (H.264 720p + AAC, guide), PCR à moins de 1 ms, débit calé sur la carte à 2 ppm près |
+| **Téléviseur sur le câble** (carte à 30 dB d'atténuation, 4 multiplex venant de dvbtx, chaînes en direct) | la recherche de chaînes trouve les 4 multiplex et leurs 15 services avec noms et numéros ; chaînes regardées normalement |
 | CPU (2 × Cortex-A9) | dvbt_tx environ 57 % d'un cœur pour 4 flux UDP |
 | Température | Zynq stable à 70 °C avec 4 multiplex (firmware d'origine au repos : 77 °C) |
 
@@ -230,8 +231,9 @@ HamGeek Fishball 7010, mode 1R1T, dissipateur cuivre sans ventilateur.
   fuite ; elle n'a pas gêné la réception.
 - Envoyer les flux par une liaison filaire : en Wi-Fi, des coupures de quelques centaines de ms
   vident les tampons et la carte comble le trou avec des paquets nuls.
-- Les récepteurs de test étaient un HackRF One avec gr-dtv et la supervision de dvbtx ; une clé
-  RTL2832U courante ne s'est pas verrouillée lors de nos essais, sans investigation plus poussée.
+- Récepteurs utilisés : un téléviseur grand public (recherche de chaînes et visionnage), un HackRF One
+  avec gr-dtv pour les mesures ; une clé RTL2832U courante ne s'est pas verrouillée lors de nos essais,
+  sans investigation plus poussée.
 
 ## Et le DVB-T2 ?
 

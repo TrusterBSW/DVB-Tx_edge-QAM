@@ -212,6 +212,7 @@ HamGeek Fishball 7010, mode 1R1T, copper heatsink without fan.
 | 4 UDP streams at full rate for 90 s (wired) | 1 895 054 packets per multiplex sent and received, none lost |
 | RF on the coax, HackRF One centred on each multiplex, gr-dtv | 4 multiplexes, 0 uncorrectable packet; MER 22–23 dB, flat across the channel (limit of the 8-bit HackRF) |
 | Stream from dvbtx, RF reception | service decoded (H.264 720p + AAC, EPG), PCRs within 1 ms, rate locked to the board within 2 ppm |
+| **TV set on the cable** (board at 30 dB of attenuation, 4 multiplexes from dvbtx, live channels) | channel scan finds the 4 multiplexes and their 15 services with names and numbers; channels watched normally |
 | CPU (2 × Cortex-A9) | dvbt_tx about 57 % of one core for 4 UDP streams |
 | Temperature | Zynq 70 °C steady with 4 multiplexes (original firmware idle: 77 °C) |
 
@@ -224,8 +225,8 @@ HamGeek Fishball 7010, mode 1R1T, copper heatsink without fan.
   not affect reception.
 - Send the streams over a wired link: on Wi-Fi, stalls of a few hundred ms empty the buffers and
   the board fills the gap with null packets.
-- The test receivers were a HackRF One with gr-dtv and the dvbtx monitoring; a common RTL2832U
-  stick did not lock in our tests and was not investigated further.
+- Receivers used: a consumer TV set (channel scan and viewing), a HackRF One with gr-dtv for the
+  measurements; a common RTL2832U stick did not lock in our tests and was not investigated further.
 
 ## DVB-T2?
 
