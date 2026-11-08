@@ -1,0 +1,91 @@
+#!/bin/sh
+# edgeQAM Fishball : modulateur DVB-T dans le FPGA (bitstream fishball_edgeqam).
+# Réglages : /boot/edgeqam.conf (racine de la carte SD). API : http://<carte>:8080/status
+#   /etc/init.d/S99edgeqam start|stop|restart|status
+CONF=/boot/edgeqam.conf
+PIDF=/var/run/edgeqam.pid
+ENABLE=0; NMUX=1; FREQ=474000000; ATT=30; DISABLE=0; MUTE=; HTTP_PORT=8080
+[ -r "$CONF" ] && eval "$(tr -d '\r' < "$CONF" | grep -E '^[A-Z0-9_]+=[A-Za-z0-9_.:/-]*$')"
+[ -n "$MUTE" ] && DISABLE=$MUTE   # ancien nom du reglage
+
+phy() { for d in /sys/bus/iio/devices/iio:device*; do [ "$(cat "$d/name" 2>/dev/null)" = ad9361-phy ] && echo "$d"; done; }
+
+# annonce mDNS (avahi-daemon de Tezuka, service statique : aucun CPU en plus) pour dvbtx sur le PC
+avahi_publish() {
+	[ -d /etc/avahi/services ] || mkdir -p /etc/avahi/services
+	PORTS=""; i=0
+	while [ $i -lt "$NMUX" ]; do eval v=\$INPUT$i; p=${v##*:}; PORTS="$PORTS${PORTS:+,}$p"; i=$((i + 1)); done
+	cat > /etc/avahi/services/edgeqam.service <<EOS
+<?xml version="1.0" standalone='no'?>
+<!DOCTYPE service-group SYSTEM "avahi-service.dtd">
+<service-group>
+  <name replace-wildcards="yes">edgeQAM %h</name>
+  <service>
+    <type>_dvbmod._udp</type>
+    <port>${PORTS%%,*}</port>
+    <txt-record>std=dvbt</txt-record>
+    <txt-record>mode=2k</txt-record>
+    <txt-record>qam=64</txt-record>
+    <txt-record>cr=7/8</txt-record>
+    <txt-record>gi=1/32</txt-record>
+    <txt-record>bw=8</txt-record>
+    <txt-record>rate=31668449</txt-record>
+    <txt-record>nmux=$NMUX</txt-record>
+    <txt-record>ports=$PORTS</txt-record>
+    <txt-record>freq1=$FREQ</txt-record>
+    <txt-record>disable=$DISABLE</txt-record>
+    <txt-record>api=$HTTP_PORT</txt-record>
+  </service>
+</service-group>
+EOS
+	chmod 755 /etc/avahi/services; chmod 644 /etc/avahi/services/edgeqam.service   # avahi-daemon tourne en utilisateur avahi
+	killall -HUP avahi-daemon 2>/dev/null
+}
+
+start() {
+	# au demarrage le pilote laisse l'AD9363 a -10 dB d'attenuation TX : la mettre au maximum tout
+	# de suite (sortie TX reliee directement a un recepteur par cable), dvbt_tx reglera ATT ensuite
+	P=$(phy); [ -n "$P" ] && echo -89.75 > "$P/out_voltage0_hardwaregain" 2>/dev/null
+	[ "$ENABLE" = 1 ] || { echo "edgeqam : ENABLE=0 dans $CONF, rien a faire"; return 0; }
+	[ -f "$PIDF" ] && kill -0 "$(cat "$PIDF")" 2>/dev/null && { echo "edgeqam : deja lance"; return 0; }
+	# services inutiles pour un modulateur : ils chauffent et sdr_ip_gadget ecrit le GPIO DAC
+	/etc/init.d/S55sdr_ip_gadget stop >/dev/null 2>&1; killall sdr_ip_gadget 2>/dev/null
+	command -v webui >/dev/null 2>&1 && webui off >/dev/null 2>&1
+	INPUTS=""; i=0
+	while [ $i -lt "$NMUX" ]; do eval v=\$INPUT$i; [ -n "$v" ] && INPUTS="$INPUTS $v"; i=$((i + 1)); done
+	rm -f "$PIDF.stop"
+	(
+		while :; do
+			logger -t edgeqam "dvbt_tx -n $NMUX -f $FREQ -a $ATT -d $DISABLE$INPUTS"
+			dvbt_tx -n "$NMUX" -f "$FREQ" -a "$ATT" -d "$DISABLE" -p "$HTTP_PORT" -c "$CONF" $INPUTS 2>&1 \
+				| logger -t dvbt_tx
+			[ -f "$PIDF.stop" ] && break
+			sleep 3
+		done
+	) </dev/null >/dev/null 2>&1 &
+	echo $! > "$PIDF"
+	avahi_publish
+	# moins de chauffe : synthe RX coupe, voie TX2 au minimum (apres le reglage de la radio)
+	( sleep 6; P=$(phy); [ -n "$P" ] && { echo 1 > "$P/out_altvoltage0_RX_LO_powerdown"; \
+		echo -89.75 > "$P/out_voltage1_hardwaregain"; } ) >/dev/null 2>&1 &
+	echo "edgeqam : $NMUX multiplex, LO $FREQ Hz, entrees :$INPUTS"
+}
+
+stop() {
+	touch "$PIDF.stop"
+	[ -f "$PIDF" ] && kill "$(cat "$PIDF")" 2>/dev/null
+	killall dvbt_tx 2>/dev/null
+	sleep 2
+	rm -f "$PIDF" "$PIDF.stop"
+	P=$(phy); [ -n "$P" ] && echo 0 > "$P/out_altvoltage0_RX_LO_powerdown" 2>/dev/null
+	rm -f /etc/avahi/services/edgeqam.service; killall -HUP avahi-daemon 2>/dev/null
+	echo "edgeqam : arrete"
+}
+
+case "$1" in
+	start) start ;;
+	stop) stop ;;
+	restart) stop; start ;;
+	status) wget -q -O - "http://127.0.0.1:$HTTP_PORT/status" 2>/dev/null || echo "edgeqam : pas de reponse" ;;
+	*) echo "usage: $0 start|stop|restart|status"; exit 1 ;;
+esac
