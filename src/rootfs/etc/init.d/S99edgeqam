@@ -4,7 +4,7 @@
 #   /etc/init.d/S99edgeqam start|stop|restart|status
 CONF=/boot/edgeqam.conf
 PIDF=/var/run/edgeqam.pid
-ENABLE=0; NMUX=1; FREQ=474000000; ATT=30; DISABLE=0; MUTE=; HTTP_PORT=8080
+ENABLE=0; NMUX=1; FREQ=474000000; ATT=30; DISABLE=0; MUTE=; HTTP_PORT=8080; NAME=
 [ -r "$CONF" ] && eval "$(tr -d '\r' < "$CONF" | grep -E '^[A-Z0-9_]+=[A-Za-z0-9_.:/-]*$')"
 [ -n "$MUTE" ] && DISABLE=$MUTE   # ancien nom du reglage
 
@@ -13,13 +13,16 @@ phy() { for d in /sys/bus/iio/devices/iio:device*; do [ "$(cat "$d/name" 2>/dev/
 # annonce mDNS (avahi-daemon de Tezuka, service statique : aucun CPU en plus) pour dvbtx sur le PC
 avahi_publish() {
 	[ -d /etc/avahi/services ] || mkdir -p /etc/avahi/services
+	# identifiant unique de la carte (adresse MAC Ethernet) et nom affiche (NAME, sinon "edgeQAM <hote>")
+	ID=$(tr -d ':' < /sys/class/net/eth0/address 2>/dev/null)
+	SNAME=${NAME:-edgeQAM %h}
 	PORTS=""; i=0
 	while [ $i -lt "$NMUX" ]; do eval v=\$INPUT$i; p=${v##*:}; PORTS="$PORTS${PORTS:+,}$p"; i=$((i + 1)); done
 	cat > /etc/avahi/services/edgeqam.service <<EOS
 <?xml version="1.0" standalone='no'?>
 <!DOCTYPE service-group SYSTEM "avahi-service.dtd">
 <service-group>
-  <name replace-wildcards="yes">edgeQAM %h</name>
+  <name replace-wildcards="yes">$SNAME</name>
   <service>
     <type>_dvbmod._udp</type>
     <port>${PORTS%%,*}</port>
@@ -35,6 +38,7 @@ avahi_publish() {
     <txt-record>freq1=$FREQ</txt-record>
     <txt-record>disable=$DISABLE</txt-record>
     <txt-record>api=$HTTP_PORT</txt-record>
+    <txt-record>id=$ID</txt-record>
   </service>
 </service-group>
 EOS

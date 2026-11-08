@@ -58,6 +58,7 @@ Aucun IQ ne passe sur le réseau et les cœurs ARM restent presque inoccupés.
 - [Avec dvbtx](#avec-dvbtx)
 - [Mesures](#mesures)
 - [Limites et remarques](#limites-et-remarques)
+- [Et le DVB-T2 ?](#et-le-dvb-t2-)
 - [Compilation](#compilation)
 - [Remerciements](#remerciements)
 - [Licence](#licence)
@@ -136,6 +137,7 @@ curl http://192.168.1.50:8080/status
 | `DISABLE` | `0` | multiplex retirés de l'antenne (masque : 1 = mux 1, 2 = mux 2, 4 = mux 3, 8 = mux 4) |
 | `INPUT0`…`INPUT3` | `udp:1001`…`udp:1004` | `udp:PORT`, `udp:GROUPE:PORT` (multicast) ou `file:/chemin.ts` |
 | `HTTP_PORT` | `8080` | port de l'API HTTP |
+| `NAME` | vide | nom du service mDNS (vide = `edgeQAM <hôte>`) ; à régler s'il y a plusieurs cartes |
 
 Figé dans le FPGA : DVB-T 2K, 64-QAM, rendement 7/8, intervalle de garde 1/32, non hiérarchique,
 8 MHz, cell id 0 signalé.
@@ -149,8 +151,13 @@ Figé dans le FPGA : DVB-T 2K, 64-QAM, rendement 7/8, intervalle de garde 1/32, 
 - `GET /set?freq=HZ&att=DB&disable=MASQUE&save=1` : appliqué en direct (quelques ms) ; `save=1`
   réécrit les valeurs dans `edgeqam.conf`. `freq` est le centre du multiplex 1. La réponse donne les
   valeurs appliquées.
-- mDNS : service `_dvbmod._udp` nommé `edgeQAM <hôte>`, TXT `std=dvbt mode=2k qam=64 cr=7/8 gi=1/32
-  bw=8 rate=31668449 nmux ports freq1 disable api` (`avahi-browse -rpt _dvbmod._udp`).
+- mDNS : service `_dvbmod._udp` nommé `edgeQAM <hôte>` (ou `NAME` de `edgeqam.conf`), TXT
+  `std=dvbt mode=2k qam=64 cr=7/8 gi=1/32 bw=8 rate=31668449 nmux ports freq1 disable api id`
+  (`avahi-browse -rpt _dvbmod._udp`). `id` est l'adresse MAC Ethernet de la carte, unique et stable.
+- **Plusieurs cartes** : toutes les cartes Tezuka s'appellent `plutoplus`, donc avahi renomme la
+  seconde (`edgeQAM plutoplus #2`, `plutoplus-2.local`) dans un ordre qui dépend de celle qui démarre
+  en premier. Donner à chaque carte son propre `NAME` dans `edgeqam.conf`, et choisir une carte par
+  `NAME` ou `id` (ou utiliser des adresses IP fixes).
 
 ## Avec dvbtx
 
@@ -223,6 +230,28 @@ HamGeek Fishball 7010, mode 1R1T, dissipateur cuivre sans ventilateur.
   vident les tampons et la carte comble le trou avec des paquets nuls.
 - Les récepteurs de test étaient un HackRF One avec gr-dtv et la supervision de dvbtx ; une clé
   RTL2832U courante ne s'est pas verrouillée lors de nos essais, sans investigation plus poussée.
+
+## Et le DVB-T2 ?
+
+Pas sur cette carte. Un modulateur DVB-T2 demande, en plus de ce qu'utilise le DVB-T, un codeur BCH et
+un codeur LDPC de 64 800 bits, des entrelaceurs de cellules et temporel, un entrelaceur fréquentiel sur
+tout le symbole, le symbole P1 et la signalisation L1. Estimation pour **un** multiplex DVB-T2
+(8 MHz, un seul PLP), non synthétisée :
+
+| | XC7Z010 (cette carte) | DVB-T2, mode 8K | DVB-T2, mode 32K | XC7Z020 |
+|---|---|---|---|---|
+| LUT | 17 600 | ~23 000 | ~26 000 | 53 200 |
+| BRAM (36 Kbit) | 60 | ~60 | ~100 | 140 |
+| DSP | 80 | ~35 | ~40 | 220 |
+
+Ces totaux comprennent la base de la carte (système processeur, cœur AD9361, DMA : environ 5 000 LUT
+et 10 BRAM). Le codeur LDPC (~6 000 LUT) et, en mode 32K, l'IFFT de 32 768 points et l'entrelaceur
+fréquentiel (~70 BRAM à eux deux) dominent. Sur le XC7Z010, un seul multiplex représente déjà environ
+130 % des LUT, et en mode 32K bien plus que les BRAM disponibles. Une carte **XC7Z020** prise en charge
+par Tezuka (un Fishball 7020 ou un LibreSDR) accueillerait un multiplex DVB-T2 en mode 32K avec de la
+marge (environ 50 % des LUT et 70 % des BRAM), peut-être deux en mode 8K. Un multiplex DVB-T2 de 8 MHz
+transporte environ 40 à 50 Mbit/s (256-QAM 5/6), contre 127 Mbit/s pour les quatre multiplex DVB-T de
+cette image. Non prévu.
 
 ## Compilation
 

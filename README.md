@@ -57,6 +57,7 @@ No IQ crosses the network and the ARM cores stay mostly idle.
 - [With dvbtx](#with-dvbtx)
 - [Measurements](#measurements)
 - [Limits and notes](#limits-and-notes)
+- [DVB-T2?](#dvb-t2)
 - [Building from source](#building-from-source)
 - [Credits](#credits)
 - [License](#license)
@@ -133,6 +134,7 @@ curl http://192.168.1.50:8080/status
 | `DISABLE` | `0` | multiplexes taken off the air (bit mask: 1 = mux 1, 2 = mux 2, 4 = mux 3, 8 = mux 4) |
 | `INPUT0`…`INPUT3` | `udp:1001`…`udp:1004` | `udp:PORT`, `udp:GROUP:PORT` (multicast) or `file:/path.ts` |
 | `HTTP_PORT` | `8080` | port of the HTTP API |
+| `NAME` | empty | mDNS service name (empty = `edgeQAM <host>`); set it when there are several boards |
 
 Fixed in the FPGA: DVB-T 2K, 64-QAM, code rate 7/8, guard interval 1/32, non-hierarchical, 8 MHz,
 cell id 0 signalled.
@@ -144,8 +146,13 @@ cell id 0 signalled.
   multiplex the packets received, nulls inserted, packets dropped and the buffer level.
 - `GET /set?freq=HZ&att=DB&disable=MASK&save=1`: applied live (a few ms); `save=1` writes the values
   back to `edgeqam.conf`. `freq` is the centre of multiplex 1. The reply gives the applied values.
-- mDNS: service `_dvbmod._udp` named `edgeQAM <host>`, TXT `std=dvbt mode=2k qam=64 cr=7/8 gi=1/32
-  bw=8 rate=31668449 nmux ports freq1 disable api` (`avahi-browse -rpt _dvbmod._udp`).
+- mDNS: service `_dvbmod._udp` named `edgeQAM <host>` (or `NAME` from `edgeqam.conf`), TXT
+  `std=dvbt mode=2k qam=64 cr=7/8 gi=1/32 bw=8 rate=31668449 nmux ports freq1 disable api id`
+  (`avahi-browse -rpt _dvbmod._udp`). `id` is the board's Ethernet MAC address, unique and stable.
+- **Several boards**: all Tezuka boards share the host name `plutoplus`, so avahi renames the
+  second one (`edgeQAM plutoplus #2`, `plutoplus-2.local`) in an order that depends on which boots
+  first. Give each board its own `NAME` in `edgeqam.conf`, and select a board by `NAME` or `id`
+  (or use fixed IP addresses).
 
 ## With dvbtx
 
@@ -217,6 +224,26 @@ HamGeek Fishball 7010, mode 1R1T, copper heatsink without fan.
   the board fills the gap with null packets.
 - The test receivers were a HackRF One with gr-dtv and the dvbtx monitoring; a common RTL2832U
   stick did not lock in our tests and was not investigated further.
+
+## DVB-T2?
+
+Not on this board. A DVB-T2 modulator needs, on top of what DVB-T uses, BCH and a 64 800-bit LDPC
+encoder, cell and time interleavers, a frequency interleaver over the whole symbol, the P1 symbol
+and the L1 signalling. Estimate for **one** DVB-T2 multiplex (8 MHz, one PLP), not synthesised:
+
+| | XC7Z010 (this board) | DVB-T2, 8K mode | DVB-T2, 32K mode | XC7Z020 |
+|---|---|---|---|---|
+| LUT | 17 600 | ~23 000 | ~26 000 | 53 200 |
+| BRAM (36 Kbit) | 60 | ~60 | ~100 | 140 |
+| DSP | 80 | ~35 | ~40 | 220 |
+
+These totals include the board's base design (processor system, AD9361 core, DMA: about 5 000 LUT
+and 10 BRAM). The LDPC encoder (~6 000 LUT) and, in 32K mode, the 32 768-point IFFT and frequency
+interleaver (~70 BRAM together) dominate. On the XC7Z010 even one multiplex is about 130 % of the
+LUTs, and in 32K mode well over the BRAM. An **XC7Z020** board supported by Tezuka (a Fishball 7020
+or a LibreSDR) would fit one DVB-T2 multiplex in 32K mode with room left (about 50 % of the LUTs and
+70 % of the BRAM), possibly two in 8K mode. One DVB-T2 multiplex in 8 MHz carries about 40-50 Mbit/s
+(256-QAM 5/6), against 127 Mbit/s for the four DVB-T multiplexes of this image. Not planned.
 
 ## Building from source
 
