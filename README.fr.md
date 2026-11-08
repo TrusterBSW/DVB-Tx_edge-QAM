@@ -170,7 +170,7 @@ n'adapte pas le débit.
 
 | | |
 |---|---|
-| Version de dvbtx | **≥ 0.3.0 (à venir)**, ou la branche `main` actuelle : le pilote de radio `edgeqam` y est depuis le commit 450279c, pas dans le paquet dvbtx 0.2.0 |
+| Version de dvbtx | **≥ 0.3.0** ([dvbtx_0.3.0_amd64.deb](https://github.com/TrusterBSW/DVB-Tx/raw/main/releases/dvbtx_0.3.0_amd64.deb)) ; le pilote de radio `edgeqam` n'est pas dans la 0.2.0 |
 | Norme | DVB-T 2K, 64-QAM, 7/8, GI 1/32, 8 MHz uniquement ; dvbtx refuse d'autres paramètres de porteuse sur cette radio |
 | Multiplex | 1 à 4 par carte, sur des canaux de 8 MHz adjacents (multiplex k = FREQ + (k−1) × 8 MHz) |
 | Découverte | mDNS `_dvbmod._udp` (`address = "auto"`) ou une adresse IP fixe |

@@ -165,7 +165,7 @@ and no rate adaptation.
 
 | | |
 |---|---|
-| dvbtx version | **≥ 0.3.0 (upcoming)**, or the current `main` branch: the `edgeqam` radio driver is on `main` since commit 450279c, not in the dvbtx 0.2.0 package |
+| dvbtx version | **≥ 0.3.0** ([dvbtx_0.3.0_amd64.deb](https://github.com/TrusterBSW/DVB-Tx/raw/main/releases/dvbtx_0.3.0_amd64.deb)); the `edgeqam` radio driver is not in 0.2.0 |
 | Standard | DVB-T 2K, 64-QAM, 7/8, GI 1/32, 8 MHz only; dvbtx refuses other carrier parameters on this radio |
 | Multiplexes | 1 to 4 per board, on adjacent 8 MHz channels (multiplex k = FREQ + (k−1) × 8 MHz) |
 | Discovery | mDNS `_dvbmod._udp` (`address = "auto"`) or a fixed IP address |
